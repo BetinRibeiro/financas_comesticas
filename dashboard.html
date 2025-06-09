@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanças Domésticas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        'primary-dark': '#4338ca',
+                        income: '#10b981',
+                        expense: '#ef4444'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .shadow-soft { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+        
+        .transation-income { 
+            border-left: 4px solid #10b981; 
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(255,255,255,1) 100%);
+        }
+        
+        .transation-expense { 
+            border-left: 4px solid #ef4444; 
+            background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, rgba(255,255,255,1) 100%);
+        }
+        
+        .progress-bar-inner {
+            height: 100%;
+            border-radius: 9999px;
+            background-color: #4f46e5;
+            transition: width 0.5s ease-in-out;
+        }
+        
+        .radial-progress {
+            --value: 0;
+            --size: 6rem;
+            --thickness: 8px;
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen">
+    <!-- Navegação -->
+    <nav class="bg-primary text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <i class="fas fa-wallet text-2xl mr-3"></i>
+                    <span class="text-xl font-bold">Finanças Domésticas</span>
+                </div>
+
+        <ul class="flex space-x-6 text-sm font-medium">
+            <li><a href="index.html" class="hover:underline">Home</a></li>
+            <li><a href="dashboard.html" class="hover:underline">Dashboard</a></li>
+            <li><a href="importar.html" class="underline font-bold">Importar</a></li>
+        </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Seção Resumo -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <!-- Entradas -->
+            <div class="bg-white rounded-lg shadow-soft p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Entradas</p>
+                        <p id="total-income" class="text-2xl font-bold text-green-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-arrow-down text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Saídas -->
+            <div class="bg-white rounded-lg shadow-soft p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Saídas</p>
+                        <p id="total-expenses" class="text-2xl font-bold text-red-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-arrow-up text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Média Entradas -->
+            <div class="bg-white rounded-lg shadow-soft p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Média Entradas</p>
+                        <p id="average-income" class="text-2xl font-bold text-green-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-chart-line text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Média Saídas -->
+            <div class="bg-white rounded-lg shadow-soft p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Média Saídas</p>
+                        <p id="average-expenses" class="text-2xl font-bold text-red-600">R$ 0,00</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-chart-line text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção Gráfico Anual de 5 Anos -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="bg-white rounded-lg shadow-soft p-4 mb-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral dos Últimos 5 Anos</h2>
+            <canvas id="fiveYearChart" height="100"></canvas>
+        </div>
+
+        <!-- Seção Gráfico Mensal -->
+        <div class="bg-white rounded-lg shadow-soft p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">Detalhes Mensais</h2>
+                <div class="flex items-center space-x-4">
+                    <button id="prev-year" class="text-gray-400 hover:text-primary">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="current-year" class="font-medium text-gray-700">2023</span>
+                    <button id="next-year" class="text-gray-400 hover:text-primary">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            <canvas id="annualChart" height="100"></canvas>
+        </div>
+    </div>
+    
+        </div>
+    </div>
+
+
+    
+    <script>// Configuração inicial do banco de dados IndexedDB
+const DB_NAME = "FinanceDB";
+const DB_VERSION = 1;
+const STORE_NAME = "transactions";
+let db = null;
+
+// Estado global da aplicação
+const appState = {
+    chartYear: new Date().getFullYear(), // ano do gráfico
+    transactions: []
+};
+
+// Elementos DOM utilizados
+const domElements = {
+    annualChart: document.getElementById('annualChart'),
+    prevYearBtn: document.getElementById('prev-year'),
+    nextYearBtn: document.getElementById('next-year'),
+    currentYearEl: document.getElementById('current-year'),
+    totalIncome: document.getElementById('total-income'),
+    totalExpenses: document.getElementById('total-expenses'),
+    averageIncome: document.getElementById('average-income'),
+    averageExpenses: document.getElementById('average-expenses')
+};
+
+// Formata número como moeda BRL
+function formatCurrency(value) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+}
+
+// Soma total de transações por período e tipo
+function getTransactionsTotal(start, end, type) {
+    return new Promise(resolve => {
+        if (!db) return resolve(0);
+
+        const tx = db.transaction([STORE_NAME], "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const index = store.index("date");
+        const range = IDBKeyRange.bound(start, end);
+
+        let total = 0;
+
+        const request = index.openCursor(range);
+        request.onsuccess = event => {
+            const cursor = event.target.result;
+            if (cursor) {
+                if (cursor.value.type === type) {
+                    total += cursor.value.amount;
+                }
+                cursor.continue();
+            } else {
+                resolve(total);
+            }
+        };
+
+        request.onerror = () => resolve(0);
+    });
+}
+
+// Atualiza totais e médias no painel
+async function updateSummary() {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    let monthsWithIncome = 0;
+    let monthsWithExpense = 0;
+
+    for (let month = 0; month < 12; month++) {
+        const monthStart = `${appState.chartYear}-${String(month + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(appState.chartYear, month + 1, 0).getDate();
+        const monthEnd = `${appState.chartYear}-${String(month + 1).padStart(2, '0')}-${lastDay}`;
+
+        const [income, expense] = await Promise.all([
+            getTransactionsTotal(monthStart, monthEnd, 'income'),
+            getTransactionsTotal(monthStart, monthEnd, 'expense')
+        ]);
+
+        totalIncome += income;
+        totalExpenses += expense;
+
+        if (income > 0) monthsWithIncome++;
+        if (expense > 0) monthsWithExpense++;
+    }
+
+    const averageIncome = monthsWithIncome ? totalIncome / monthsWithIncome : 0;
+    const averageExpenses = monthsWithExpense ? totalExpenses / monthsWithExpense : 0;
+
+    domElements.totalIncome.textContent = formatCurrency(totalIncome);
+    domElements.totalExpenses.textContent = formatCurrency(totalExpenses);
+    domElements.averageIncome.textContent = formatCurrency(averageIncome);
+    domElements.averageExpenses.textContent = formatCurrency(averageExpenses);
+}
+
+let annualChartInstance = null;
+let fiveYearChartInstance = null;
+
+async function renderFiveYearChart() {
+    const currentYear = new Date().getFullYear();
+    const yearRange = 5;
+    const yearlyData = [];
+
+    for (let i = yearRange - 1; i >= 0; i--) {
+        const year = currentYear - i;
+        const yearStart = `${year}-01-01`;
+        const yearEnd = `${year}-12-31`;
+
+        const [income, expenses] = await Promise.all([
+            getTransactionsTotal(yearStart, yearEnd, 'income'),
+            getTransactionsTotal(yearStart, yearEnd, 'expense')
+        ]);
+
+        yearlyData.push({ year, income, expenses: Math.abs(expenses) });
+    }
+
+    if (fiveYearChartInstance) fiveYearChartInstance.destroy();
+
+    const canvas = document.getElementById('fiveYearChart');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    fiveYearChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: yearlyData.map(item => item.year.toString()),
+            datasets: [
+                {
+                    label: 'Entradas',
+                    data: yearlyData.map(item => item.income),
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)'
+                },
+                {
+                    label: 'Saídas',
+                    data: yearlyData.map(item => item.expenses),
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: value => 'R$ ' + value.toLocaleString('pt-BR')
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.raw);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+async function renderAnnualChart() {
+    const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+    const monthlyData = [];
+    const currentYear = appState.chartYear;
+
+    domElements.currentYearEl.textContent = currentYear;
+
+    for (let month = 0; month < 12; month++) {
+        const monthStart = `${currentYear}-${String(month + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(currentYear, month + 1, 0).getDate();
+        const monthEnd = `${currentYear}-${String(month + 1).padStart(2, '0')}-${lastDay}`;
+
+        const [income, expenses] = await Promise.all([
+            getTransactionsTotal(monthStart, monthEnd, 'income'),
+            getTransactionsTotal(monthStart, monthEnd, 'expense')
+        ]);
+
+        monthlyData.push({ month: monthNames[month], income, expenses: Math.abs(expenses) });
+    }
+
+    if (annualChartInstance) annualChartInstance.destroy();
+
+    const ctx = domElements.annualChart.getContext('2d');
+    annualChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: monthlyData.map(item => item.month),
+            datasets: [
+                {
+                    label: 'Entradas',
+                    data: monthlyData.map(item => item.income),
+                    backgroundColor: '#10b981'
+                },
+                {
+                    label: 'Saídas',
+                    data: monthlyData.map(item => item.expenses),
+                    backgroundColor: '#ef4444'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: value => 'R$ ' + value.toLocaleString('pt-BR')
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': ' + formatCurrency(context.raw);
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function navigateYear(offset) {
+    appState.chartYear += offset;
+    renderAnnualChart();
+    updateSummary();
+}
+
+function initEventListeners() {
+    domElements.prevYearBtn.addEventListener('click', () => navigateYear(-1));
+    domElements.nextYearBtn.addEventListener('click', () => navigateYear(1));
+}
+
+function initApp() {
+    initEventListeners();
+    renderFiveYearChart();
+    renderAnnualChart();
+    updateSummary();
+}
+
+// Só inicia a aplicação após o banco de dados estar pronto
+const request = indexedDB.open(DB_NAME, DB_VERSION);
+request.onsuccess = function(event) {
+    db = event.target.result;
+    initApp();
+};
+
+request.onerror = function(event) {
+    console.error("Erro ao abrir o banco de dados:", event.target.error);
+};
+
+request.onupgradeneeded = function(event) {
+    db = event.target.result;
+    if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+        store.createIndex("date", "date", { unique: false });
+    }
+};
+
+    </script>
+    
+</body>
+</html>
