@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Column Reordering Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4361ee',
+                        secondary: '#3f37c9',
+                        accent: '#4895ef',
+                        dark: '#0f172a',
+                        light: '#f8fafc'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .drag-container {
+            min-height: 100px;
+        }
+        .draggable {
+            transition: all 0.3s ease;
+            cursor: move;
+        }
+        .draggable.dragging {
+            opacity: 0.5;
+            transform: scale(0.98);
+        }
+        .dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+        }
+        .dropzone.active {
+            border-color: #4361ee;
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        .preview-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .preview-table th {
+            position: sticky;
+            top: 0;
+            background-color: #4361ee;
+            color: white;
+        }
+        .preview-table tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+        .preview-table tr:hover {
+            background-color: #e2e8f0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-primary mb-4">
+                <i class="fas fa-table mr-3"></i>Ferramenta de Reordenação de Colunas CSV
+            </h1>
+            <p class="text-gray-600 max-w-2xl mx-auto">
+                Faça upload do seu arquivo CSV, arraste e solte para reorganizar as colunas, e baixe o arquivo modificado. A primeira linha é considerada como cabeçalhos das colunas.
+            </p>
+        </header>
+
+        <!-- Main Content -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <!-- File Upload Section -->
+            <div class="border-b border-gray-200">
+                <div class="p-6 md:p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+                            <input type="file" id="fileInput" class="hidden" accept=".csv">
+                            <i class="fas fa-file-csv text-primary text-5xl mb-4"></i>
+                            <p class="text-gray-600 text-center mb-6">Drag & drop your CSV file here or click to browse</p>
+                            <button id="uploadBtn" class="bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition duration-300 flex items-center">
+                                <i class="fas fa-upload mr-2"></i> Select CSV File
+                            </button>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="flex items-center bg-blue-50 p-4 rounded-lg">
+                                <i class="fas fa-info-circle text-blue-500 text-xl mr-3"></i>
+                                <p class="text-blue-700">A primeira linha do seu CSV será tratada como linha de cabeçalho.</p>
+                            </div>
+                            <div class="flex items-center bg-yellow-50 p-4 rounded-lg">
+                                <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+                                <p class="text-yellow-700">Os arquivos são processados localmente no seu navegador. Seus dados nunca saem do seu computador.</p>
+                            </div>
+                            <div class="flex items-center bg-green-50 p-4 rounded-lg">
+                                <i class="fas fa-file-export text-green-500 text-xl mr-3"></i>
+                                <p class="text-green-700">Após reordenar as colunas, baixe o CSV modificado com um clique.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="fileInfo" class="mt-4 hidden">
+                        <p class="text-green-600 font-medium flex items-center">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            <span id="fileName">example.csv</span> carregado com sucesso com <span id="columnCount">5</span> colunas e <span id="rowCount">100</span> linhas.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Column Reordering Section (Hidden until file upload) -->
+            <div id="reorderSection" class="hidden">
+                <div class="p-6 md:p-8">
+                    <h2 class="text-2xl font-bold text-dark mb-6">
+                        <i class="fas fa-arrows-alt mr-3"></i>Reorganize Suas Colunas
+                    </h2>
+                    
+                    <!-- Instructions -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                        <div class="bg-indigo-50 p-4 rounded-lg flex items-start">
+                            <div class="bg-primary rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
+                                <span class="text-white font-bold">1</span>
+                            </div>
+                            <p class="text-indigo-800">Arraste e solte os cabeçalhos das colunas abaixo para reordenar</p>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-lg flex items-start">
+                            <div class="bg-primary rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
+                                <span class="text-white font-bold">2</span>
+                            </div>
+                            <p class="text-indigo-800">Veja uma prévia dos seus dados enquanto reordena as colunas</p>
+                        </div>
+                        <div class="bg-indigo-50 p-4 rounded-lg flex items-start">
+                            <div class="bg-primary rounded-full w-8 h-8 flex items-center justify-center mr-3 mt-0.5">
+                                <span class="text-white font-bold">3</span>
+                            </div>
+                            <p class="text-indigo-800">Baixe o arquivo CSV modificado quando estiver satisfeito</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Draggable Columns -->
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                        <i class="fas fa-grip-lines mr-2"></i>Arraste estes cabeçalhos para reorganizar:
+                    </h3>
+                    <div id="sortable" class="flex flex-wrap gap-3 drag-container mb-8">
+                        <!-- Dynamically populated -->
+                    </div>
+                    
+                    <!-- Preview Section -->
+                    <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+                        <i class="fas fa-table mr-2"></i>Prévia dos Dados:
+                    </h3>
+                    <div class="border border-gray-200 rounded-lg overflow-hidden">
+                        <div class="overflow-x-auto max-h-80">
+                            <table id="previewTable" class="w-full preview-table">
+                                <thead>
+                                    <tr id="headerRow"></tr>
+                                </thead>
+                                <tbody id="dataBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex flex-wrap gap-4 mt-8">
+                        <button id="downloadBtn" class="bg-primary hover:bg-secondary text-white px-6 py-3 rounded-lg flex items-center transition duration-300">
+                            <i class="fas fa-download mr-2"></i> Baixar CSV Modificado
+                        </button>
+                        <button id="resetBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg flex items-center transition duration-300">
+                            <i class="fas fa-redo mr-2"></i> Reverter para Ordem Original
+                        </button>
+                        <button id="newFileBtn" class="border border-gray-300 hover:bg-gray-100 text-gray-700 px-6 py-3 rounded-lg flex items-center transition duration-300">
+                            <i class="fas fa-file-import mr-2"></i> Carregar Outro Arquivo
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- How to Use Section -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-8">
+            <h2 class="text-2xl font-bold text-primary mb-6 text-center">
+                <i class="fas fa-question-circle mr-3"></i>Como Usar Esta Ferramenta
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-purple-50 p-5 rounded-lg">
+                    <div class="w-12 h-12 bg-purple-500 text-white rounded-full flex items-center justify-center mb-4">
+                        <span class="text-2xl">1</span>
+                    </div>
+                    <h3 class="font-bold text-purple-700 mb-2">Carregar Arquivo CSV</h3>
+                    <p class="text-purple-600">Clique no botão de upload e selecione seu arquivo CSV. Certifique-se que a primeira linha contém os cabeçalhos das colunas.</p>
+                </div>
+                <div class="bg-blue-50 p-5 rounded-lg">
+                    <div class="w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center mb-4">
+                        <span class="text-2xl">2</span>
+                    </div>
+                    <h3 class="font-bold text-blue-700 mb-2">Arraste para Reordenar</h3>
+                    <p class="text-blue-600">Arraste e solte os cabeçalhos das colunas para reorganizá-los na ordem desejada.</p>
+                </div>
+                <div class="bg-green-50 p-5 rounded-lg">
+                    <div class="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center mb-4">
+                        <span class="text-2xl">3</span>
+                    </div>
+                    <h3 class="font-bold text-green-700 mb-2">Prévia das Mudanças</h3>
+                    <p class="text-green-600">Veja uma prévia da tabela de dados mostrando o novo arranjo das colunas.</p>
+                </div>
+                <div class="bg-red-50 p-5 rounded-lg">
+                    <div class="w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center mb-4">
+                        <span class="text-2xl">4</span>
+                    </div>
+                    <h3 class="font-bold text-red-700 mb-2">Baixar CSV</h3>
+                    <p class="text-red-600">Baixe o CSV modificado com a nova ordem de colunas para usar em qualquer aplicativo.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dados CSV de exemplo
+        const sampleCSV = `Name,Email,Age,Country,Registration Date
+John Doe,john@example.com,32,USA,2023-01-15
+Jane Smith,jane@example.com,28,Canada,2023-02-22
+Robert Johnson,robert@example.com,45,UK,2023-03-10
+Emily Davis,emily@example.com,29,Australia,2023-04-05
+Michael Wilson,michael@example.com,37,Germany,2023-05-18`;
+
+        // Global variables
+        let csvData = [];
+        let headers = [];
+        let rows = [];
+        let currentOrder = [];
+        
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const columnCount = document.getElementById('columnCount');
+        const rowCount = document.getElementById('rowCount');
+        const reorderSection = document.getElementById('reorderSection');
+        const sortable = document.getElementById('sortable');
+        const headerRow = document.getElementById('headerRow');
+        const dataBody = document.getElementById('dataBody');
+        const previewTable = document.getElementById('previewTable');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const newFileBtn = document.getElementById('newFileBtn');
+
+        // Initialize file upload
+        uploadBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        
+        // Drag and drop for file upload
+        document.querySelectorAll('.flex-col.items-center')[0].addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.add('border-blue-500', 'bg-blue-50');
+        });
+        
+        document.querySelectorAll('.flex-col.items-center')[0].addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+        });
+        
+        document.querySelectorAll('.flex-col.items-center')[0].addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.currentTarget.classList.remove('border-blue-500', 'bg-blue-50');
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload();
+            }
+        });
+        
+        // Process uploaded file
+        function handleFileUpload() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            fileName.textContent = file.name;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                parseCSV(content);
+            };
+            reader.readAsText(file);
+        }
+        
+        // Initialize with sample data for demonstration
+        document.addEventListener('DOMContentLoaded', () => {
+            parseCSV(sampleCSV);
+            fileName.textContent = 'sample.csv';
+            fileInfo.classList.remove('hidden');
+        });
+        
+        // Parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.split('\n').filter(line => line.trim() !== '');
+            if (lines.length < 1) {
+                alert('CSV file is empty or not properly formatted');
+                return;
+            }
+            
+            // Extract headers and data
+            headers = lines[0].split(';').map(header => header.trim());
+            rows = lines.slice(1).map(line => line.split(';').map(cell => cell.trim()));
+            
+            // Initialize order
+            currentOrder = [...headers];
+            
+            // Update info display
+            columnCount.textContent = headers.length;
+            rowCount.textContent = rows.length;
+            fileInfo.classList.remove('hidden');
+            
+            // Show reordering interface
+            reorderSection.classList.remove('hidden');
+            
+            // Render UI
+            renderColumns();
+            renderPreview();
+        }
+        
+        // Render draggable columns
+        function renderColumns() {
+            sortable.innerHTML = '';
+            currentOrder.forEach((header, index) => {
+                const column = document.createElement('div');
+                column.className = 'draggable bg-white px-4 py-3 rounded-lg shadow flex items-center cursor-move border border-gray-200 hover:border-accent';
+                column.setAttribute('draggable', 'true');
+                column.setAttribute('data-header', header);
+                
+                column.innerHTML = `
+                    <i class="fas fa-grip-lines text-gray-400 mr-3"></i>
+                    <span class="font-medium text-gray-700">${header}</span>
+                    <span class="ml-auto bg-gray-100 text-gray-600 text-sm font-bold rounded-full w-6 h-6 flex items-center justify-center">${index + 1}</span>
+                `;
+                
+                column.addEventListener('dragstart', dragStart);
+                column.addEventListener('dragend', dragEnd);
+                
+                sortable.appendChild(column);
+            });
+        }
+        
+        // Drag and Drop Functions
+        function dragStart(e) {
+            e.dataTransfer.setData('text/plain', this.getAttribute('data-header'));
+            this.classList.add('dragging', 'bg-primary', 'text-white');
+            setTimeout(() => this.style.opacity = '0.4', 0);
+        }
+        
+        function dragEnd(e) {
+            this.classList.remove('dragging', 'bg-primary', 'text-white');
+            this.style.opacity = '1';
+        }
+        
+        // Handle drop events on the sortable area
+        sortable.addEventListener('dragover', e => {
+            e.preventDefault();
+        });
+        
+        sortable.addEventListener('dragenter', e => {
+            e.preventDefault();
+        });
+        
+        sortable.addEventListener('drop', e => {
+            e.preventDefault();
+            const draggedHeader = e.dataTransfer.getData('text/plain');
+            const draggedElement = document.querySelector(`.draggable[data-header="${draggedHeader}"]`);
+            
+            // Prevent drop on itself
+            if (draggedElement === e.target) return;
+            
+            // Determine drop position (find closest child)
+            const children = [...sortable.children];
+            const closest = children.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offsetY = e.clientY - box.top - box.height / 2;
+                
+                if (offsetY < 0 && offsetY > closest.offset) {
+                    return { offset: offsetY, element: child };
+                }
+                
+                return closest;
+            }, { offset: Number.NEGATIVE_INFINITY });
+            
+            // Move the dragged element
+            if (closest.element) {
+                sortable.insertBefore(draggedElement, closest.element);
+            } else {
+                sortable.appendChild(draggedElement);
+            }
+            
+            // Update the current order
+            updateColumnOrder();
+        });
+        
+        // Update column order based on DOM position
+        function updateColumnOrder() {
+            currentOrder = [...sortable.children].map(child => child.getAttribute('data-header'));
+            renderPreview();
+        }
+        
+        // Render data preview table
+        function renderPreview() {
+            // Clear table
+            headerRow.innerHTML = '';
+            dataBody.innerHTML = '';
+            
+            // Populate header row
+            currentOrder.forEach(header => {
+                const th = document.createElement('th');
+                th.className = 'px-6 py-3 text-left font-bold text-white';
+                th.textContent = header;
+                headerRow.appendChild(th);
+            });
+            
+            // Populate first 5 data rows
+            rows.slice(0, 5).forEach(row => {
+                const tr = document.createElement('tr');
+                
+                currentOrder.forEach(header => {
+                    const index = headers.indexOf(header);
+                    const td = document.createElement('td');
+                    td.className = 'px-6 py-3 border-b border-gray-100 text-gray-600';
+                    td.textContent = index !== -1 ? row[index] : '';
+                    tr.appendChild(td);
+                });
+                
+                dataBody.appendChild(tr);
+            });
+        }
+        
+        // Download modified CSV
+        downloadBtn.addEventListener('click', () => {
+            if (csvData.length === 0) return;
+            
+            let csvContent = currentOrder.join(';') + '\n';
+            
+            rows.forEach(row => {
+                const line = currentOrder.map(header => {
+                    const index = headers.indexOf(header);
+                    return index !== -1 ? row[index] : '';
+                });
+                csvContent += line.join(';') + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'reordered_columns.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+        
+        // Reset to original order
+        resetBtn.addEventListener('click', () => {
+            currentOrder = [...headers];
+            renderColumns();
+            renderPreview();
+        });
+        
+        // Upload new file
+        newFileBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            reorderSection.classList.add('hidden');
+        });
+    </script>
+</body>
+</html>
