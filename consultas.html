@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Transactions Search</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        dark: '#1F2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 100vh;
+        }
+        
+        .transaction-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .transaction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .income {
+            border-left: 4px solid #10B981;
+        }
+        
+        .expense {
+            border-left: 4px solid #EF4444;
+        }
+        
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 5px solid #3B82F6;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.3s forwards;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header Section -->
+        <header class="mb-12">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Financial Tracker</h1>
+                    <p class="text-gray-600 mt-2">Manage and search your transactions</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="bg-gray-200 border-2 border-dashed rounded-xl w-12 h-12"></div>
+                    <div>
+                        <p class="font-medium">John Doe</p>
+                        <p class="text-sm text-gray-500">Premium Member</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Search Panel -->
+                <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-1 h-fit">
+                    <h2 class="text-xl font-semibold text-gray-800 mb-6">Search Transactions</h2>
+                    
+                    <!-- Search Form -->
+                    <form id="searchForm" class="mb-6">
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="searchInput" 
+                                placeholder="Enter description..." 
+                                class="w-full p-4 pl-12 pr-10 bg-gray-100 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            >
+                            <div class="absolute left-4 top-4 text-gray-400">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <button type="button" class="absolute right-4 top-4 text-gray-400 hover:text-primary">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="mt-4 flex flex-wrap gap-3">
+                            <button type="button" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full">
+                                <i class="fas fa-utensils mr-1"></i> Food
+                            </button>
+                            <button type="button" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full">
+                                <i class="fas fa-shopping-cart mr-1"></i> Shopping
+                            </button>
+                            <button type="button" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full">
+                                <i class="fas fa-home mr-1"></i> Rent
+                            </button>
+                            <button type="button" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full">
+                                <i class="fas fa-salary mr-1"></i> Salary
+                            </button>
+                        </div>
+                        
+                        <!-- Date Filter -->
+                        <div class="mt-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Date Range</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <button type="button" class="bg-blue-50 text-primary hover:bg-primary hover:text-white px-3 py-1 rounded-lg text-sm">Today</button>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm">This Week</button>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm">This Month</button>
+                                <button type="button" class="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg text-sm">Custom</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Transaction Type Filter -->
+                        <div class="mt-6">
+                            <h3 class="text-sm font-medium text-gray-700 mb-2">Transaction Type</h3>
+                            <div class="space-y-2">
+                                <div class="flex items-center">
+                                    <input id="all-types" type="radio" name="type" value="all" class="h-4 w-4 text-primary" checked>
+                                    <label for="all-types" class="ml-2 text-gray-700">All</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input id="income" type="radio" name="type" value="income" class="h-4 w-4 text-green-500">
+                                    <label for="income" class="ml-2 text-gray-700"><i class="fas fa-arrow-down text-green-500 mr-1"></i> Income</label>
+                                </div>
+                                <div class="flex items-center">
+                                    <input id="expense" type="radio" name="type" value="expense" class="h-4 w-4 text-red-500">
+                                    <label for="expense" class="ml-2 text-gray-700"><i class="fas fa-arrow-up text-red-500 mr-1"></i> Expense</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button 
+                            type="submit" 
+                            class="mt-8 w-full bg-primary hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
+                        >
+                            <i class="fas fa-search mr-2"></i> Search Transactions
+                        </button>
+                    </form>
+                    
+                    <!-- Stats Summary -->
+                    <div class="mt-8 border-t border-gray-200 pt-6">
+                        <h3 class="text-sm font-medium text-gray-700 mb-4">Monthly Summary</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-green-600">Income</span>
+                                    <span class="text-sm font-medium">$4,250.00</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-1">
+                                    <span class="text-sm text-red-600">Expenses</span>
+                                    <span class="text-sm font-medium">$3,120.50</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-red-500 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <div class="flex justify-between">
+                                    <span class="font-medium text-gray-800">Net Balance</span>
+                                    <span class="font-bold text-lg text-blue-600">$1,129.50</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Panel -->
+                <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-semibold text-gray-800">Search Results</h2>
+                        <div class="text-sm text-gray-600">
+                            <span id="resultsCount">0</span> transactions found
+                        </div>
+                    </div>
+                    
+                    <!-- Loading Overlay -->
+                    <div id="loading-overlay" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white rounded-xl p-8 flex flex-col items-center">
+                            <div class="loading-spinner"></div>
+                            <p id="progress-text" class="mt-4 text-gray-600">Loading transactions...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Results Container -->
+                    <div id="resultsContainer" class="space-y-4">
+                        <div class="text-center py-12">
+                            <div class="mx-auto w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center">
+                                <i class="fas fa-search text-3xl text-blue-500"></i>
+                            </div>
+                            <h3 class="mt-4 text-lg font-medium text-gray-700">Search your transactions</h3>
+                            <p class="mt-2 text-gray-500 max-w-md mx-auto">
+                                Enter a description above to search your financial transactions. We'll help you find what you're looking for.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script>
+        // Database setup and functions
+        const DB_NAME = "FinanceDB";
+        const DB_VERSION = 1;
+        const STORE_NAME = "transactions";
+        let db = null;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const progressText = document.getElementById('progress-text');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsCount = document.getElementById('resultsCount');
+        const searchForm = document.getElementById('searchForm');
+        
+        // Initialize IndexedDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onupgradeneeded = function(event) {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+                        store.createIndex("uniqueFields", ["description", "amount", "type", "date"], { unique: false });
+                        store.createIndex("description", "description", { unique: false });
+                    }
+                };
+                
+                request.onsuccess = function(event) {
+                    db = event.target.result;
+                    resolve(db);
+                };
+                
+                request.onerror = function(event) {
+                    reject("Error opening database: " + event.target.errorCode);
+                };
+            });
+        }
+        
+        // Generate sample data (for demonstration only)
+        function generateSampleData() {
+            const sampleData = [
+                { description: "Grocery shopping", amount: 85.25, type: "expense", date: "2023-10-15", category: "Food" },
+                { description: "Salary October", amount: 2500.00, type: "income", date: "2023-10-05", category: "Salary" },
+                { description: "Electricity bill", amount: 125.30, type: "expense", date: "2023-10-12", category: "Utilities" },
+                { description: "Netflix subscription", amount: 14.99, type: "expense", date: "2023-10-01", category: "Entertainment" },
+                { description: "Coffee at Starbucks", amount: 5.75, type: "expense", date: "2023-10-16", category: "Food" },
+                { description: "Gas station", amount: 45.00, type: "expense", date: "2023-10-14", category: "Transportation" },
+                { description: "Freelance project payment", amount: 1200.00, type: "income", date: "2023-10-10", category: "Work" },
+                { description: "Amazon purchase", amount: 63.40, type: "expense", date: "2023-10-08", category: "Shopping" },
+                { description: "Restaurant dinner", amount: 65.80, type: "expense", date: "2023-10-17", category: "Food" },
+                { description: "Investment dividends", amount: 150.75, type: "income", date: "2023-10-03", category: "Investment" }
+            ];
+            
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readwrite");
+                const store = transaction.objectStore(STORE_NAME);
+                
+                // Clear the store first to avoid duplicates
+                const clearRequest = store.clear();
+                
+                clearRequest.onsuccess = function() {
+                    sampleData.forEach(item => {
+                        store.add(item);
+                    });
+                    
+                    transaction.oncomplete = function() {
+                        resolve();
+                    };
+                    
+                    transaction.onerror = function(event) {
+                        reject(event.target.error);
+                    };
+                };
+                
+                clearRequest.onerror = function(event) {
+                    reject(event.target.error);
+                };
+            });
+        }
+        
+        // Search transactions by description
+        function searchTransactions(description) {
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction([STORE_NAME], "readonly");
+                const store = transaction.objectStore(STORE_NAME);
+                const index = store.index("description");
+                const request = index.getAll(IDBKeyRange.only(description));
+                
+                const results = [];
+                
+                request.onsuccess = function(event) {
+                    resolve(event.target.result);
+                };
+                
+                request.onerror = function(event) {
+                    reject(event.target.error);
+                };
+            });
+        }
+        
+        // Display transaction results
+        function displayResults(transactions) {
+            resultsContainer.innerHTML = '';
+            resultsCount.textContent = transactions.length;
+            
+            if (transactions.length === 0) {
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-folder-open text-3xl text-gray-400"></i>
+                        </div>
+                        <h3 class="mt-4 text-lg font-medium text-gray-700">No transactions found</h3>
+                        <p class="mt-2 text-gray-500 max-w-md mx-auto">
+                            We couldn't find any transactions matching your search. Try a different description.
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+            
+            transactions.forEach(transaction => {
+                const transactionElement = document.createElement('div');
+                transactionElement.className = `transaction-card bg-white rounded-lg overflow-hidden slide-in ${transaction.type}`;
+                
+                const formattedDate = new Date(transaction.date).toLocaleDateString('en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                });
+                
+                const amountClass = transaction.type === 'income' ? 
+                    'text-green-600 font-semibold' : 'text-red-600 font-semibold';
+                
+                const amountSign = transaction.type === 'income' ? '+' : '-';
+                
+                const categoryIcon = transaction.category === 'Food' ? 'fas fa-utensils' :
+                                   transaction.category === 'Salary' ? 'fas fa-money-check' :
+                                   transaction.category === 'Utilities' ? 'fas fa-lightbulb' :
+                                   transaction.category === 'Entertainment' ? 'fas fa-film' :
+                                   transaction.category === 'Shopping' ? 'fas fa-shopping-bag' :
+                                   transaction.category === 'Transportation' ? 'fas fa-car' :
+                                   transaction.category === 'Work' ? 'fas fa-briefcase' :
+                                   transaction.category === 'Investment' ? 'fas fa-chart-line' : 'fas fa-wallet';
+                
+                transactionElement.innerHTML = `
+                    <div class="p-4 flex items-center">
+                        <div class="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-50">
+                            <i class="${categoryIcon} text-blue-500"></i>
+                        </div>
+                        <div class="ml-4 flex-grow">
+                            <h3 class="font-medium text-gray-800">${transaction.description}</h3>
+                            <div class="flex items-center mt-1 text-sm text-gray-500">
+                                <span>${formattedDate}</span>
+                                <span class="mx-2">•</span>
+                                <span>${transaction.category}</span>
+                            </div>
+                        </div>
+                        <div class="${amountClass} text-lg">${amountSign}$${Math.abs(transaction.amount).toFixed(2)}</div>
+                    </div>
+                `;
+                
+                resultsContainer.appendChild(transactionElement);
+            });
+        }
+        
+        // Handle form submission
+        async function handleSearch(e) {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            
+            if (!searchTerm) {
+                return;
+            }
+            
+            showLoading("Searching transactions...");
+            
+            try {
+                // Simulate a short delay to show the loading animation
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                const results = await searchTransactions(searchTerm);
+                displayResults(results);
+            } catch (error) {
+                console.error("Search error:", error);
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="mx-auto w-24 h-24 bg-red-50 rounded-full flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-3xl text-red-500"></i>
+                        </div>
+                        <h3 class="mt-4 text-lg font-medium text-gray-700">Error retrieving data</h3>
+                        <p class="mt-2 text-gray-500 max-w-md mx-auto">
+                            There was a problem searching your transactions. Please try again.
+                        </p>
+                    </div>
+                `;
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Show loading overlay
+        function showLoading(message) {
+            progressText.textContent = message;
+            loadingOverlay.classList.remove('hidden');
+            loadingOverlay.classList.add('flex');
+        }
+        
+        // Hide loading overlay
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+            loadingOverlay.classList.remove('flex');
+        }
+        
+        // Initialize the application
+        async function initApp() {
+            try {
+                showLoading("Initializing database...");
+                await initDB();
+                
+                // Generate sample data for demo purposes
+                await generateSampleData();
+                
+                hideLoading();
+            } catch (error) {
+                console.error("Initialization error:", error);
+                hideLoading();
+                
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="mx-auto w-24 h-24 bg-red-50 rounded-full flex items-center justify-center">
+                            <i class="fas fa-exclamation-circle text-3xl text-red-500"></i>
+                        </div>
+                        <h3 class="mt-4 text-lg font-medium text-gray-700">Database error</h3>
+                        <p class="mt-2 text-gray-500 max-w-md mx-auto">
+                            Failed to initialize the database. Please refresh the page and try again.
+                        </p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Setup event listeners
+        searchForm.addEventListener('submit', handleSearch);
+        
+        // Quick search button handlers
+        document.querySelectorAll('.text-xs.bg-gray-100').forEach(button => {
+            button.addEventListener('click', function(e) {
+                const category = this.textContent.trim().split(' ')[1];
+                document.getElementById('searchInput').value = category;
+                document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+            });
+        });
+        
+        // Start the application
+        initApp();
+    </script>
+</body>
+</html>
