@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Finanças Domésticas</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#4f46e5',
+            'primary-dark': '#4338ca',
+            income: '#10b981',
+            expense: '#ef4444'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .shadow-soft { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+    .transation-income {
+      border-left: 4px solid #10b981;
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.05) 0%, rgba(255,255,255,1) 100%);
+    }
+    .transation-expense {
+      border-left: 4px solid #ef4444;
+      background: linear-gradient(90deg, rgba(239, 68, 68, 0.05) 0%, rgba(255,255,255,1) 100%);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen">
+
+  <!-- Navegação com links de páginas -->
+  <nav class="bg-primary text-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <div class="flex items-center">
+          <i class="fas fa-wallet text-2xl mr-3"></i>
+          <span class="text-xl font-bold">Finanças Domésticas</span>
+        </div>
+        <ul class="flex space-x-6 text-sm font-medium">
+          <li><a href="index.html" class="hover:underline">Home</a></li>
+          <li><a href="dashboard.html" class="hover:underline">Dashboard</a></li>
+          <li><a href="importar.html" class="underline font-bold">Importar</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Área de upload e instruções -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+    <div class="border-b border-gray-200">
+      <div class="p-6 md:p-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <div class="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <button id="import-csv-btn" class="bg-white text-primary px-4 py-2 rounded hover:bg-gray-200">
+              <i class="fas fa-upload mr-1"></i> Importar CSV
+            </button>
+            <button id="export-db-btn" class="bg-white text-primary px-4 py-2 rounded hover:bg-gray-200 mt-2">
+              <i class="fas fa-file-export mr-1"></i> Exportar Banco (JSON)
+            </button>
+            <button id="export-csv-btn" class="bg-white text-primary px-4 py-2 rounded hover:bg-gray-200 mt-2">
+              <i class="fas fa-file-csv mr-1"></i> Exportar Banco (CSV)
+            </button>
+            <button id="import-db-btn" class="bg-white text-primary px-4 py-2 rounded hover:bg-gray-200 mt-2">
+              <i class="fas fa-file-import mr-1"></i> Importar Banco
+            </button>
+            <button id="delete-db-btn" class="bg-white text-red-500 px-4 py-2 rounded hover:bg-gray-200 mt-2">
+              <i class="fas fa-trash-alt mr-1"></i> Excluir Banco
+            </button>
+            <input type="file" id="csv-file-input" class="hidden" accept=".csv">
+            <input type="file" id="db-file-input" class="hidden" accept=".json">
+          </div>
+          <div class="space-y-4">
+            <div class="flex items-center bg-blue-50 p-4 rounded-lg">
+              <i class="fas fa-info-circle text-blue-500 text-xl mr-3"></i>
+              <p class="text-blue-700">A primeira linha do seu CSV será tratada como cabeçalho e ignorada.</p>
+            </div>
+            <div class="flex items-center bg-yellow-50 p-4 rounded-lg">
+              <i class="fas fa-exclamation-triangle text-yellow-500 text-xl mr-3"></i>
+              <p class="text-yellow-700">Os dados são processados localmente. Nenhuma informação sai do seu navegador.</p>
+            </div>
+            <div class="flex items-center bg-green-50 p-4 rounded-lg">
+              <i class="fas fa-file-csv text-green-500 text-xl mr-3"></i>
+              <p class="text-green-700">Apenas valores positivos são tratados como entrada (income). Valores negativos são convertidos para saída (expense).</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tela de progresso -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-60 text-white flex items-center justify-center text-xl font-medium hidden">
+      <span id="progress-text">Iniciando...</span>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto py-10 px-6 space-y-8">
+    <!-- Header Section -->
+    <div class="bg-white shadow-soft rounded-xl p-6 border border-gray-100">
+      <div class="flex items-center space-x-4">
+        <div class="bg-primary/10 p-3 rounded-lg">
+          <span class="text-primary text-2xl">📄</span>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-gray-800">Padrão de Importação CSV</h1>
+          <p class="text-gray-600 mt-1">Formato e regras para importar transações financeiras</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="bg-white shadow-soft rounded-xl p-6 border border-gray-100">
+      <h2 class="text-xl font-semibold mb-4 text-primary">Estrutura do Arquivo CSV</h2>
+      <div class="bg-blue-50 text-blue-700 p-4 rounded-lg mb-4 flex items-start">
+        <i class="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+        <p>O arquivo deve conter exatamente 5 colunas separadas por ponto-e-vírgula (;)</p>
+      </div>
+      
+      <div class="overflow-x-auto">
+        <table class="w-full border-collapse text-sm rounded-lg overflow-hidden">
+          <thead>
+            <tr class="bg-primary text-left text-white">
+              <th class="p-4">Coluna</th>
+              <th class="p-4">Formato</th>
+              <th class="p-4">Exemplo</th>
+              <th class="p-4">Armazenado em</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100">
+            <tr class="hover:bg-gray-50">
+              <td class="p-4 font-medium">CODIGO DA TRANSACAO</td>
+              <td class="p-4 text-gray-600">Texto (único)</td>
+              <td class="p-4">49d4d...</td>
+              <td class="p-4 text-primary font-medium">transactions.id</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="p-4 font-medium">DATA</td>
+              <td class="p-4 text-gray-600">dd/mm/aaaa</td>
+              <td class="p-4">02/01/2025</td>
+              <td class="p-4 text-primary font-medium">transactions.date</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="p-4 font-medium">TIPO</td>
+              <td class="p-4 text-gray-600">Texto</td>
+              <td class="p-4">Pix recebido</td>
+              <td class="p-4 text-primary font-medium">transactions.category</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="p-4 font-medium">DESCRICAO</td>
+              <td class="p-4 text-gray-600">Texto</td>
+              <td class="p-4">Robson Leite</td>
+              <td class="p-4 text-primary font-medium">transactions.description</td>
+            </tr>
+            <tr class="hover:bg-gray-50">
+              <td class="p-4 font-medium">VALOR</td>
+              <td class="p-4 text-gray-600">Número com vírgula</td>
+              <td class="p-4">-150,00</td>
+              <td class="p-4 text-primary font-medium">transactions.amount</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Processing Section -->
+    <div class="bg-white shadow-soft rounded-xl p-6 border border-gray-100">
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="bg-primary/10 p-2 rounded-lg">
+          <span class="text-primary text-xl">🔍</span>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-800">Processamento Automático</h3>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <h4 class="font-medium text-gray-700 mb-2 flex items-center">
+            <i class="fas fa-arrow-up text-income mr-2"></i> Valores Positivos
+          </h4>
+          <p>Transação do tipo <span class="font-semibold text-income">"income"</span></p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <h4 class="font-medium text-gray-700 mb-2 flex items-center">
+            <i class="fas fa-arrow-down text-expense mr-2"></i> Valores Negativos
+          </h4>
+          <p>Transação do tipo <span class="font-semibold text-expense">"expense"</span></p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <h4 class="font-medium text-gray-700 mb-2 flex items-center">
+            <i class="fas fa-calendar-day text-primary mr-2"></i> Formato de Data
+          </h4>
+          <p>Convertido para <span class="font-semibold text-primary">ISO (aaaa-mm-dd)</span></p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+          <h4 class="font-medium text-gray-700 mb-2 flex items-center">
+            <i class="fas fa-fingerprint text-primary mr-2"></i> Verificação de Duplicatas
+          </h4>
+          <p>Por: description + amount + category + date</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Script principal -->
+  <script>
+    const DB_NAME = "FinanceDB";
+    const DB_VERSION = 1;
+    const STORE_NAME = "transactions";
+    let db = null;
+
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const progressText = document.getElementById('progress-text');
+
+    // Criação ou abertura do banco de dados
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+    request.onupgradeneeded = function(event) {
+      db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+        store.createIndex("uniqueFields", ["description", "amount", "type", "date"], { unique: false });
+      }
+    };
+
+    request.onsuccess = function(event) {
+      db = event.target.result;
+    };
+
+    request.onerror = function(event) {
+      console.error("Erro ao abrir o banco:", event.target.error);
+    };
+
+    // Verifica se a transação já existe (evita duplicatas)
+    function transactionExists(transaction) {
+      return new Promise(resolve => {
+        const tx = db.transaction(STORE_NAME, "readonly");
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.openCursor();
+
+        request.onsuccess = function(event) {
+          const cursor = event.target.result;
+          if (cursor) {
+            const t = cursor.value;
+            if (
+              t.description === transaction.description &&
+              t.amount === transaction.amount &&
+              t.type === transaction.type &&
+              t.date === transaction.date
+            ) {
+              resolve(true);
+              return;
+            }
+            cursor.continue();
+          } else {
+            resolve(false);
+          }
+        };
+
+        request.onerror = () => resolve(false);
+      });
+    }
+
+    // Limpa todas as transações
+    async function clearDatabase() {
+      return new Promise(resolve => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const request = store.clear();
+        
+        request.onsuccess = () => resolve(true);
+        request.onerror = () => resolve(false);
+      });
+    }
+
+    // Adiciona a transação se ela não for duplicada
+    async function addTransactionIfNotExists(transaction) {
+      const exists = await transactionExists(transaction);
+      if (!exists) {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const store = tx.objectStore(STORE_NAME);
+        store.add(transaction);
+      }
+    }
+
+    // Ativa inputs ao clicar nos botões
+    document.getElementById('import-csv-btn').addEventListener('click', () => {
+      document.getElementById('csv-file-input').click();
+    });
+    
+    document.getElementById('export-db-btn').addEventListener('click', exportDatabase);
+    document.getElementById('export-csv-btn').addEventListener('click', exportToCSV);
+    document.getElementById('import-db-btn').addEventListener('click', () => {
+      document.getElementById('db-file-input').click();
+    });
+
+    // Lê o CSV selecionado
+    document.getElementById('csv-file-input').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      loadingOverlay.classList.remove('hidden');
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        console.log("Iniciando leitura do arquivo CSV");
+        const lines = e.target.result.trim().split(/\r?\n/);
+        const validLines = lines.filter(line => line && !line.includes("<fim>") && !line.startsWith("CODIGO"));
+
+        const total = validLines.length;
+        for (let i = 0; i < total; i++) {
+          progressText.textContent = `Importando ${i + 1} de ${total}...`;
+
+          const line = validLines[i].trim();
+          const parts = line.split(';');
+          if (parts.length !== 5) continue;
+
+          const [id, dateStr, type, description, valueStr] = parts;
+          let valorNumerico = parseFloat(valueStr.replace(/\./g, '').replace(',', '.'));
+          if (isNaN(valorNumerico)) continue;
+
+          const [dia, mes, ano] = dateStr.split('/');
+          const dataFormatada = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+
+          const tipo = valorNumerico < 0 ? "expense" : "income";
+          valorNumerico = Math.abs(valorNumerico);
+          
+          if (!description || !type || !id || !dateStr) continue;
+
+          const transaction = {
+            id,
+            type: tipo,
+            amount: valorNumerico,
+            description: description.trim(),
+            category: type.trim(),
+            date: dataFormatada,
+            createdAt: new Date().toISOString()
+          };
+
+          await addTransactionIfNotExists(transaction);
+          await new Promise(resolve => setTimeout(resolve, 30));
+        }
+
+        loadingOverlay.classList.add('hidden');
+        event.target.value = '';
+      };
+
+      reader.readAsText(file);
+    });
+
+    // Formata data para o padrão dd/mm/aaaa
+    function formatDateToBR(dateStr) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    // Exporta todo o banco de dados para CSV no mesmo padrão de importação
+    async function exportToCSV() {
+      if (!db) {
+        alert('Banco de dados não está aberto');
+        return;
+      }
+
+      loadingOverlay.classList.remove('hidden');
+      progressText.textContent = 'Preparando exportação CSV...';
+
+      try {
+        const transactions = await getAllTransactions();
+        
+        let csvContent = "CODIGO DA TRANSACAO;DATA;TIPO;DESCRICAO;VALOR\n";
+        
+        transactions.forEach(t => {
+          const valorFormatado = (t.type === 'expense' ? '-' : '') + t.amount.toFixed(2).replace('.', ',');
+          csvContent += `${t.id};${formatDateToBR(t.date)};${t.category};${t.description};${valorFormatado}\n`;
+        });
+
+        const fileName = `backup-financas-${new Date().toISOString().slice(0,10)}.csv`;
+        const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Erro ao exportar CSV:', error);
+        alert('Erro ao exportar CSV');
+      } finally {
+        loadingOverlay.classList.add('hidden');
+      }
+    }
+
+    // Exporta todo o banco de dados para JSON
+    async function exportDatabase() {
+      if (!db) {
+        alert('Banco de dados não está aberto');
+        return;
+      }
+
+      loadingOverlay.classList.remove('hidden');
+      progressText.textContent = 'Preparando exportação...';
+
+      try {
+        const allTransactions = await getAllTransactions();
+        const dataStr = JSON.stringify(allTransactions);
+        const fileName = `backup-financas-${new Date().toISOString().slice(0,10)}.json`;
+        
+        const blob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Erro ao exportar:', error);
+        alert('Erro ao exportar banco de dados');
+      } finally {
+        loadingOverlay.classList.add('hidden');
+      }
+    }
+
+    // Exclui todo o banco de dados
+    document.getElementById('delete-db-btn').addEventListener('click', async function() {
+      const confirmed = confirm('Tem certeza que deseja EXCLUIR TODOS os dados? Esta ação não pode ser desfeita!');
+      if (!confirmed) return;
+
+      loadingOverlay.classList.remove('hidden');
+      progressText.textContent = 'Excluindo banco de dados...';
+      
+      try {
+        await new Promise((resolve) => {
+          const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+          deleteRequest.onsuccess = () => resolve(true);
+          deleteRequest.onerror = () => resolve(false);
+        });
+        
+        alert('Banco de dados excluído com sucesso! Recarregando...');
+        window.location.reload();
+      } catch (error) {
+        console.error('Erro ao excluir banco:', error);
+        alert('Erro ao excluir banco de dados');
+      } finally {
+        loadingOverlay.classList.add('hidden');
+      }
+    });
+
+    // Importa banco de dados completo
+    document.getElementById('db-file-input').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      loadingOverlay.classList.remove('hidden');
+      progressText.textContent = 'Iniciando importação...';
+
+      try {
+        const text = await file.text();
+        const transactions = JSON.parse(text);
+        
+        if (!Array.isArray(transactions)) {
+          throw new Error('Formato de arquivo inválido');
+        }
+
+        await clearDatabase();
+        
+        progressText.textContent = `Importando ${transactions.length} transações...`;
+        await bulkAddTransactions(transactions);
+        
+        // Recarrega a página após 1 segundo
+        setTimeout(() => {
+          alert('Importação concluída com sucesso! Recarregando...');
+          window.location.reload();
+        }, 1000);
+      } catch (error) {
+        console.error('Erro ao importar:', error);
+        alert('Erro ao importar banco de dados: ' + error.message);
+      } finally {
+        loadingOverlay.classList.add('hidden');
+        event.target.value = '';
+      }
+    });
+
+    // Obtém todas as transações
+    function getAllTransactions() {
+      return new Promise(resolve => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => resolve([]);
+      });
+    }
+
+    // Adiciona múltiplas transações
+    async function bulkAddTransactions(transactions) {
+      const batchSize = 100; // Processa em lotes para evitar bloqueio
+      let processed = 0;
+      
+      while (processed < transactions.length) {
+        const batch = transactions.slice(processed, processed + batchSize);
+        
+        for (const trans of batch) {
+          const tx = db.transaction(STORE_NAME, 'readwrite');
+          const store = tx.objectStore(STORE_NAME);
+          store.add(trans);
+          
+          progressText.textContent = `Importando ${++processed} de ${transactions.length}...`;
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+    }
+  </script>
+</body>
+</html>
